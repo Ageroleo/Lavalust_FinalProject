@@ -156,7 +156,28 @@ function lava_instance()
 $performance->stop('lavalust');
 
 // Handle the request
-$url = $router->sanitize_url(str_replace($_SERVER['SCRIPT_NAME'], '', $_SERVER['PHP_SELF']));
+// Try to get URL from REQUEST_URI first (more reliable on Render.com)
+if (isset($_SERVER['REQUEST_URI'])) {
+    $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $script_dir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+    
+    // Remove script directory from request URI if it exists
+    if ($script_dir !== '/' && $script_dir !== '.' && strpos($request_uri, $script_dir) === 0) {
+        $url = substr($request_uri, strlen($script_dir));
+    } else {
+        $url = $request_uri;
+    }
+    
+    // Ensure URL starts with /
+    if (empty($url) || $url[0] !== '/') {
+        $url = '/' . ltrim($url, '/');
+    }
+    
+    $url = $router->sanitize_url($url);
+} else {
+    // Fallback to original method
+    $url = $router->sanitize_url(str_replace($_SERVER['SCRIPT_NAME'], '', $_SERVER['PHP_SELF']));
+}
 $method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper($_SERVER['REQUEST_METHOD']) : '';
 $router->initiate($url, $method);
 ?>

@@ -1,0 +1,33 @@
+AddDefaultCharset UTF-8
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # --------------------------------------------------
+    # Allow index.php
+    <Files "index.php">
+        Require all granted
+    </Files>
+
+    # --------------------------------------------------
+    # Deny access to sensitive directories
+    RedirectMatch 403 ^/(app|scheme|console|runtime)/
+
+    # --------------------------------------------------
+    # Deny access to sensitive files
+    <FilesMatch "\.(env|json|xml|log|md|lock|git|ini|bak|sql)$">
+        Require all denied
+    </FilesMatch>
+
+    # --------------------------------------------------
+    # Prevent directory browsing
+    Options -Indexes
+
+    # --------------------------------------------------
+    # Route all requests through index.php
+    # Allow access to existing files and directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    # Rewrite to index.php (path will be extracted from REQUEST_URI)
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
