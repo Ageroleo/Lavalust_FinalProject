@@ -1,5 +1,9 @@
 {
+    "config": {
+        "vendor-dir": "app/vendor"
+    },
     "require": {
-        "php": "^8.0"
+        "php": "^8.0",
+        "phpmailer/phpmailer": "^7.0"
     }
 }
