@@ -5,7 +5,8 @@ class ApplicantController extends Controller
     public function __construct()
     {
         parent::__construct();
-        session_start();
+        // Load Session library first so it can properly initialize session settings
+        $this->call->library('session');
 
         if (!isset($_SESSION['user'])) {
             redirect('/login');
@@ -104,8 +105,28 @@ class ApplicantController extends Controller
         $weight = isset($_POST['weight']) ? trim($_POST['weight']) : '';
         $email = isset($_POST['email']) ? trim($_POST['email']) : '';
         $special_skills = isset($_POST['special_skills']) ? trim($_POST['special_skills']) : '';
-        $password = isset($_POST['password']) ? trim($_POST['password']) : '';
-        $confirm_password = isset($_POST['confirm_password']) ? trim($_POST['confirm_password']) : '';
+        
+        // Educational Background
+        $school_name = isset($_POST['school_name']) ? trim($_POST['school_name']) : '';
+        $year_level = isset($_POST['year_level']) ? trim($_POST['year_level']) : '';
+        $school_type = isset($_POST['school_type']) ? trim($_POST['school_type']) : '';
+        $course = isset($_POST['course']) ? trim($_POST['course']) : '';
+        $academic_standing = isset($_POST['academic_standing']) ? trim($_POST['academic_standing']) : '';
+        
+        // Family Background
+        $father_name = isset($_POST['father_name']) ? trim($_POST['father_name']) : '';
+        $father_occupation = isset($_POST['father_occupation']) ? trim($_POST['father_occupation']) : '';
+        $mother_name = isset($_POST['mother_name']) ? trim($_POST['mother_name']) : '';
+        $mother_occupation = isset($_POST['mother_occupation']) ? trim($_POST['mother_occupation']) : '';
+        $parent_contact = isset($_POST['parent_contact']) ? trim($_POST['parent_contact']) : '';
+        $parent_address = isset($_POST['parent_address']) ? trim($_POST['parent_address']) : '';
+        $annual_income = isset($_POST['annual_income']) ? trim($_POST['annual_income']) : '';
+        
+        // Parent/Guardian Information
+        $guardian_name = isset($_POST['guardian_name']) ? trim($_POST['guardian_name']) : '';
+        $guardian_relationship = isset($_POST['guardian_relationship']) ? trim($_POST['guardian_relationship']) : '';
+        $guardian_contact = isset($_POST['guardian_contact']) ? trim($_POST['guardian_contact']) : '';
+        $guardian_address = isset($_POST['guardian_address']) ? trim($_POST['guardian_address']) : '';
 
         // Validation
         if (empty($last_name) || empty($first_name) || empty($email)) {
@@ -128,23 +149,15 @@ class ApplicantController extends Controller
             'email' => $email
         ];
 
-        // Update password only if provided
-        if (!empty($password)) {
-            if ($password !== $confirm_password) {
-                $_SESSION['error_message'] = 'Passwords do not match.';
-                redirect('/applicant/profile');
-                exit;
-            }
-            if (strlen($password) < 6) {
-                $_SESSION['error_message'] = 'Password must be at least 6 characters long.';
-                redirect('/applicant/profile');
-                exit;
-            }
-            $userData['password'] = password_hash($password, PASSWORD_DEFAULT);
-        }
-
         // Update user account
-        $userResult = $this->User->updateUser($userId, $userData);
+        // Note: updateUser returns rowCount() which can be 0 if no rows changed, but that's still success
+        try {
+            $userResult = $this->User->updateUser($userId, $userData);
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = 'Failed to update profile: ' . $e->getMessage();
+            redirect('/applicant/profile');
+            exit;
+        }
         
         // Update or create application record with profile data
         $applications = $this->Application->getApplicationsByUser($userId);
@@ -164,31 +177,174 @@ class ApplicantController extends Controller
             'weight' => $weight,
             'email' => $email,
             'special_skills' => $special_skills,
-            'user_id' => $userId
+            // Educational Background
+            'school_name' => $school_name,
+            'year_level' => $year_level,
+            'school_type' => $school_type,
+            'course' => $course,
+            'academic_standing' => $academic_standing,
+            // Family Background
+            'father_name' => $father_name,
+            'father_occupation' => $father_occupation,
+            'mother_name' => $mother_name,
+            'mother_occupation' => $mother_occupation,
+            'parent_contact' => $parent_contact,
+            'parent_address' => $parent_address,
+            'annual_income' => $annual_income,
+            // Parent/Guardian Information
+            'guardian_name' => $guardian_name,
+            'guardian_relationship' => $guardian_relationship,
+            'guardian_contact' => $guardian_contact,
+            'guardian_address' => $guardian_address,
+            'id' => $userId
         ];
         
-        if ($latestApplication) {
-            // Update existing application data
-            $this->Application->db->table('applications')
-                ->where('id', $latestApplication['id'])
-                ->update($applicationData);
-        } else {
-            // Create new application record for profile
-            $applicationData['status'] = 'pending';
-            $this->Application->saveApplication($applicationData);
+        try {
+            if ($latestApplication) {
+                // Update existing application data - use application ID, not user ID
+                $applicationId = $latestApplication['id'] ?? null;
+                if ($applicationId) {
+                    // Remove user_id from update data as it shouldn't change
+                    $updateData = $applicationData;
+                    unset($updateData['id']);
+                    $this->Application->db->table('applications')
+                        ->where('id', $applicationId)
+                        ->update($updateData);
+                }
+            } else {
+                // Create new application record for profile
+                $applicationData['status'] = 'pending';
+                $this->Application->saveApplication($applicationData);
+            }
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = 'Failed to update profile: ' . $e->getMessage();
+            redirect('/applicant/profile');
+            exit;
         }
         
-        if ($userResult) {
-            // Update session with new data
-            $updatedUser = $this->User->findUser($userId);
+        // Update was successful (userResult can be 0 if no user data changed, which is still success)
+        // Update session with new data
+        $updatedUser = $this->User->findUser($userId);
+        if ($updatedUser) {
             unset($updatedUser['password']);
             $_SESSION['user'] = $updatedUser;
-            
-            $_SESSION['success_message'] = 'Profile updated successfully!';
-        } else {
-            $_SESSION['error_message'] = 'Failed to update profile.';
+        }
+        
+        $_SESSION['success_message'] = 'Profile updated successfully!';
+        redirect('/applicant/profile');
+    }
+
+    public function settings()
+    {
+        $this->call->view('applicant/settings');
+    }
+
+    public function updateAccount()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('/applicant/settings');
+            exit;
         }
 
-        redirect('/applicant/profile');
+        $userId = $_SESSION['user']['id'];
+        $fullname = isset($_POST['fullname']) ? trim($_POST['fullname']) : '';
+        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+
+        if (empty($fullname) || empty($email)) {
+            $_SESSION['error_message'] = 'Full name and email are required.';
+            redirect('/applicant/settings');
+            exit;
+        }
+
+        // Check if email is already taken by another user
+        $existingUser = $this->User->findByEmail($email);
+        if ($existingUser && $existingUser['id'] != $userId) {
+            $_SESSION['error_message'] = 'Email is already taken by another user.';
+            redirect('/applicant/settings');
+            exit;
+        }
+
+        // Update user account
+        $userData = [
+            'fullname' => $fullname,
+            'email' => $email
+        ];
+
+        try {
+            $this->User->updateUser($userId, $userData);
+            
+            // Update session with new data
+            $updatedUser = $this->User->findUser($userId);
+            if ($updatedUser) {
+                unset($updatedUser['password']);
+                $_SESSION['user'] = $updatedUser;
+            }
+            
+            $_SESSION['success_message'] = 'Account information updated successfully!';
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = 'Failed to update account: ' . $e->getMessage();
+        }
+
+        redirect('/applicant/settings');
+    }
+
+    public function changePassword()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('/applicant/settings');
+            exit;
+        }
+
+        $userId = $_SESSION['user']['id'];
+        $currentPassword = isset($_POST['current_password']) ? $_POST['current_password'] : '';
+        $newPassword = isset($_POST['new_password']) ? $_POST['new_password'] : '';
+        $confirmPassword = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
+
+        if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
+            $_SESSION['error_message'] = 'All password fields are required.';
+            redirect('/applicant/settings');
+            exit;
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            $_SESSION['error_message'] = 'New password and confirm password do not match.';
+            redirect('/applicant/settings');
+            exit;
+        }
+
+        if (strlen($newPassword) < 6) {
+            $_SESSION['error_message'] = 'Password must be at least 6 characters long.';
+            redirect('/applicant/settings');
+            exit;
+        }
+
+        // Get current user
+        $user = $this->User->findUser($userId);
+        if (!$user) {
+            $_SESSION['error_message'] = 'User not found.';
+            redirect('/applicant/settings');
+            exit;
+        }
+
+        // Verify current password
+        if (!password_verify($currentPassword, $user['password'])) {
+            $_SESSION['error_message'] = 'Current password is incorrect.';
+            redirect('/applicant/settings');
+            exit;
+        }
+
+        // Update password
+        $userData = [
+            'password' => password_hash($newPassword, PASSWORD_DEFAULT)
+        ];
+
+        try {
+            $this->User->updateUser($userId, $userData);
+            $_SESSION['success_message'] = 'Password changed successfully!';
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = 'Failed to change password: ' . $e->getMessage();
+        }
+
+        redirect('/applicant/settings');
     }
 }

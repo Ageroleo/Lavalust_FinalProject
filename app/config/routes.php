@@ -44,29 +44,34 @@ defined('PREVENT_DIRECT_ACCESS') OR exit('No direct script access allowed');
 */
 
 // AUTH ROUTES
-$router->get('/', 'AuthController@index');          // login page
-$router->get('/login', 'AuthController@index');     // login page
-$router->post('/login', 'AuthController@login');    // login form submit
-$router->get('/register', 'AuthController@registerPage');
-$router->post('/register', 'AuthController@register');
-$router->get('/logout', 'AuthController@logout');
+$router->get('/', 'AuthController::index');          // login page
+$router->get('/login', 'AuthController::index');     // login page
+$router->post('/login', 'AuthController::login');    // login form submit
+$router->get('/register', 'AuthController::registerPage');
+$router->post('/register', 'AuthController::register');
+$router->get('/verify-email/{token}', 'AuthController::verifyEmail');
+$router->get('/logout', 'AuthController::logout');
 
 // DASHBOARD
-$router->get('/admin/dashboard', 'AuthController@adminDashboard');
-$router->get('/applicant/dashboard', 'ApplicantController@dashboard');
-$router->get('/applicant/my-applications', 'ApplicantController@myApplications');
-$router->get('/applicant/view-application/{id}', 'ApplicantController@viewApplication');
-$router->get('/applicant/profile', 'ApplicantController@profile');
-$router->post('/applicant/profile/update', 'ApplicantController@updateProfile');
+$router->get('/admin/dashboard', 'AuthController::adminDashboard');
+$router->get('/applicant/dashboard', 'ApplicantController::dashboard');
+$router->get('/applicant/my-applications', 'ApplicantController::myApplications');
+$router->get('/applicant/view-application/{id}', 'ApplicantController::viewApplication');
+$router->get('/applicant/profile', 'ApplicantController::profile');
+$router->post('/applicant/profile/update', 'ApplicantController::updateProfile');
+$router->get('/applicant/settings', 'ApplicantController::settings');
+$router->post('/applicant/settings/update-account', 'ApplicantController::updateAccount');
+$router->post('/applicant/settings/change-password', 'ApplicantController::changePassword');
 
 
 // USER CRUD (admin only)
-$router->get('/admin/users', 'UserController@index');
-$router->get('/admin/users/create', 'UserController@create');
-$router->post('/admin/users/store', 'UserController@store');
-$router->get('/admin/users/edit/{id}', 'UserController@edit');
-$router->post('/admin/users/update/{id}', 'UserController@update');
-$router->get('/admin/users/delete/{id}', 'UserController@destroy');
+$router->get('/admin/users', 'UserController::index');
+$router->get('/admin/users/search', 'UserController::search');
+$router->get('/admin/users/create', 'UserController::create');
+$router->post('/admin/users/store', 'UserController::store');
+$router->get('/admin/users/edit/{id}', 'UserController::edit');
+$router->post('/admin/users/update/{id}', 'UserController::update');
+$router->get('/admin/users/delete/{id}', 'UserController::destroy');
 
 // APPLCATION FORM
 $router->get('apply/form', 'ApplyController');
@@ -75,10 +80,13 @@ $router->get('apply/success', 'ApplyController::success');
 $route['dashboard_applicant'] = 'ApplyController::index';
 $route['apply/submit'] = 'ApplyController::submit';
 
-$router->get('/admin/dashboard', 'AdminController@dashboard');
-$router->get('/admin/applications', 'AdminController@applications');
-$router->get('/admin/view/{id}', 'AdminController@view');
-$router->get('/admin/approve/{id}', 'AdminController@approve');
-$router->get('/admin/reject/{id}', 'AdminController@reject');
+$router->get('/admin/dashboard', 'AdminController::dashboard');
+$router->get('/admin/applications', 'AdminController::applications');
+$router->get('/admin/view/{id}', 'AdminController::view');
+$router->get('/admin/approve/{id}', 'AdminController::approve');
+$router->get('/admin/reject/{id}', 'AdminController::reject');
+$router->get('/admin/settings', 'AdminController::settings');
+$router->post('/admin/settings/update-account', 'AdminController::updateAccount');
+$router->post('/admin/settings/change-password', 'AdminController::changePassword');
 
 

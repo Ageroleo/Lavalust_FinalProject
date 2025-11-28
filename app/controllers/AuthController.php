@@ -4,7 +4,8 @@ class AuthController extends Controller
     public function __construct()
     {
         parent::__construct();
-        session_start();
+        // Load Session library first so it can properly initialize session settings
+        $this->call->library('session');
         $this->call->model('UserModel', 'User');
     }
 
@@ -22,8 +23,15 @@ class AuthController extends Controller
         $email = isset($_POST['email']) ? trim($_POST['email']) : '';
         $password = isset($_POST['password']) ? (string)$_POST['password'] : '';
 
-        if ($email === 'admin@naujan.local' || $password === 'admin123') {
-            return $this->call->view('dashboard_admin');
+        // Hardcoded admin login - set session properly
+        if ($email === 'admin@naujan.local' && $password === 'admin123') {
+            $_SESSION['user'] = [
+                'id' => 0,
+                'email' => 'admin@naujan.local',
+                'fullname' => 'Administrator',
+                'role' => 'admin'
+            ];
+            return $this->redirectByRole('admin');
         }
 
         $user = $this->User->findByEmail($email);
@@ -60,14 +68,18 @@ class AuthController extends Controller
             return $this->call->view('auth/register', ['error' => 'Email already registered']);
         }
 
-        $this->User->createUser([
+        $userPayload = [
             'fullname' => $fullname,
             'email' => $email,
             'password' => password_hash($password, PASSWORD_DEFAULT),
-            'role' => 'applicant'
-        ]);
+            'role' => 'applicant',
+            'is_verified' => 1
+        ];
+
+        $this->User->createUser($userPayload);
         $_SESSION['success'] = 'Registration successful! You can now log in.';
-        header('Location: /register');
+
+        redirect('/login');
         exit;
 
     }
@@ -81,7 +93,10 @@ class AuthController extends Controller
     public function adminDashboard()
     {
         $this->requireRole('admin');
-        $this->call->view('dashboard_admin');
+        $this->call->database();
+        $this->call->model('ApplicationModel', 'Application');
+        $statistics = $this->Application->getStatistics();
+        $this->call->view('dashboard_admin', ['statistics' => $statistics]);
     }
 
     public function applicantDashboard()

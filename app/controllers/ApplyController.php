@@ -4,15 +4,40 @@ class ApplyController extends Controller
     public function __construct()
     {
         parent::__construct();
-        session_start();
+        // Load Session library first so it can properly initialize session settings
+        $this->call->library('session');
         $this->call->database(); // Initialize database connection
         $this->call->model('ApplicationModel', 'Application');
+        $this->call->model('UserModel', 'User');
     }
 
     public function index()
     {
-        // Show the scholarship application form
-        $this->call->view('apply/form');
+        // Check if user is logged in
+        if (empty($_SESSION['user'])) {
+            redirect('/login');
+            exit;
+        }
+
+        $userId = $_SESSION['user']['id'];
+        
+        // Get user data
+        $user = $this->User->findUser($userId);
+        if (!$user) {
+            $_SESSION['error_message'] = 'User not found.';
+            redirect('/login');
+            exit;
+        }
+        
+        // Get latest application data (which contains profile information)
+        $applications = $this->Application->getApplicationsByUser($userId);
+        $latestApplication = !empty($applications) ? $applications[0] : null;
+        
+        // Merge user data with application data for form pre-filling
+        $formData = array_merge($user, $latestApplication ?: []);
+        
+        // Show the scholarship application form with pre-filled data
+        $this->call->view('apply/form', ['formData' => $formData]);
     }
 
     public function submit()
@@ -57,9 +82,13 @@ class ApplyController extends Controller
             }
         }
 
-        $data = array_merge($_POST, [
+        // Remove 'id' from POST data if it exists (it shouldn't be in the form)
+        $postData = $_POST;
+        unset($postData['id']);
+        
+        $data = array_merge($postData, [
             'uploaded_files' => json_encode($uploads),
-            'id' => $_SESSION['user']['id'] ?? null,
+            'id' => $_SESSION['user']['id'] ?? null, // Link application to user
         ]);
 
         $this->Application->saveApplication($data);
