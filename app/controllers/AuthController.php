@@ -59,10 +59,23 @@ class AuthController extends Controller
         $fullname = isset($_POST['fullname']) ? trim($_POST['fullname']) : '';
         $email = isset($_POST['email']) ? trim($_POST['email']) : '';
         $password = isset($_POST['password']) ? (string)$_POST['password'] : '';
+        $confirm_password = isset($_POST['confirm_password']) ? (string)$_POST['confirm_password'] : '';
 
-        // if ($fullname === '' || $email === '' || $password === '') {
-        //     return $this->call->view('auth/register', ['error' => 'All fields are required']);
-        // }
+        // Validate required fields
+        if ($fullname === '' || $email === '' || $password === '' || $confirm_password === '') {
+            return $this->call->view('auth/register', ['error' => 'All fields are required']);
+        }
+
+        // Validate password match
+        if ($password !== $confirm_password) {
+            return $this->call->view('auth/register', ['error' => 'Passwords do not match']);
+        }
+
+        // Validate password requirements
+        $passwordErrors = $this->validatePassword($password);
+        if (!empty($passwordErrors)) {
+            return $this->call->view('auth/register', ['error' => implode(' ', $passwordErrors)]);
+        }
 
         if ($this->User->findByEmail($email)) {
             return $this->call->view('auth/register', ['error' => 'Email already registered']);
@@ -82,6 +95,29 @@ class AuthController extends Controller
         redirect('/login');
         exit;
 
+    }
+
+    private function validatePassword($password)
+    {
+        $errors = [];
+
+        if (strlen($password) < 8) {
+            $errors[] = 'Password must be at least 8 characters long.';
+        }
+
+        if (!preg_match('/[A-Z]/', $password)) {
+            $errors[] = 'Password must contain at least one uppercase letter.';
+        }
+
+        if (!preg_match('/[a-z]/', $password)) {
+            $errors[] = 'Password must contain at least one lowercase letter.';
+        }
+
+        if (!preg_match('/[0-9]/', $password)) {
+            $errors[] = 'Password must contain at least one number.';
+        }
+
+        return $errors;
     }
 
     public function logout()

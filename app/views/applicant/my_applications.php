@@ -398,6 +398,29 @@
       transform: translateY(-1px);
     }
 
+    /* Delete button styling */
+    .btn-delete {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .btn-delete:hover {
+      background: #dc2626;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      transform: translateY(-1px);
+    }
+
     /* Modern empty state */
     .empty-state {
       text-align: center;
@@ -702,10 +725,18 @@
                   </span>
                 </td>
                 <td>
-                  <a href="/applicant/view-application/<?= $app['id'] ?? '' ?>" class="btn-view">
-                    <i class="fas fa-eye"></i>
-                    View Details
-                  </a>
+                  <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <a href="/applicant/view-application/<?= $app['id'] ?? '' ?>" class="btn-view">
+                      <i class="fas fa-eye"></i>
+                      View Details
+                    </a>
+                    <a href="/applicant/delete-application/<?= $app['id'] ?? '' ?>" 
+                       class="btn-delete" 
+                       onclick="return confirm('Are you sure you want to delete this application? This action cannot be undone.');">
+                      <i class="fas fa-trash"></i>
+                      Delete
+                    </a>
+                  </div>
                 </td>
               </tr>
             <?php endforeach; ?>

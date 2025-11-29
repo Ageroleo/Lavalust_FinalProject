@@ -242,6 +242,33 @@
       transition: color 0.3s ease;
     }
 
+    .password-toggle {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.3s ease;
+      z-index: 10;
+    }
+
+    .password-toggle:hover {
+      color: #2e7d32;
+    }
+
+    .password-toggle:focus {
+      outline: none;
+      color: #2e7d32;
+    }
+
     .form-control {
       width: 100%;
       height: 46px;
@@ -255,6 +282,10 @@
       outline: none;
       transition: all 0.3s ease;
       font-family: 'Inter', sans-serif;
+    }
+
+    .password-wrapper .form-control {
+      padding-right: 50px;
     }
 
     .form-control:focus {
@@ -475,7 +506,7 @@
 
         <div class="form-group">
           <label for="password">Password</label>
-          <div class="input-wrapper">
+          <div class="input-wrapper password-wrapper">
             <input 
               type="password" 
               id="password" 
@@ -486,6 +517,9 @@
               autocomplete="current-password"
             >
             <i class="fas fa-lock input-icon"></i>
+            <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+              <i class="fas fa-eye"></i>
+            </button>
           </div>
         </div>
 
@@ -503,6 +537,29 @@
       </div>
     </div>
   </div>
+
+  <script>
+    // Toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const passwordIcon = togglePassword.querySelector('i');
+
+    togglePassword.addEventListener('click', function() {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      
+      // Toggle icon
+      if (type === 'text') {
+        passwordIcon.classList.remove('fa-eye');
+        passwordIcon.classList.add('fa-eye-slash');
+        togglePassword.setAttribute('aria-label', 'Hide password');
+      } else {
+        passwordIcon.classList.remove('fa-eye-slash');
+        passwordIcon.classList.add('fa-eye');
+        togglePassword.setAttribute('aria-label', 'Show password');
+      }
+    });
+  </script>
 
 </body>
 </html>

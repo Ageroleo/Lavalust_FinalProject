@@ -242,6 +242,33 @@
       transition: color 0.3s ease;
     }
 
+    .password-toggle {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.3s ease;
+      z-index: 10;
+    }
+
+    .password-toggle:hover {
+      color: #2e7d32;
+    }
+
+    .password-toggle:focus {
+      outline: none;
+      color: #2e7d32;
+    }
+
     .form-control {
       width: 100%;
       height: 46px;
@@ -257,10 +284,72 @@
       font-family: 'Inter', sans-serif;
     }
 
+    .password-wrapper .form-control {
+      padding-right: 50px;
+    }
+
     .form-control:focus {
       background: #ffffff;
       border-color: #2e7d32;
       box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.1);
+    }
+
+    .password-requirements {
+      margin-top: 8px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .password-requirements h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+    }
+
+    .requirement-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      color: #6b7280;
+      transition: color 0.2s;
+    }
+
+    .requirement-item.valid {
+      color: #10b981;
+    }
+
+    .requirement-item.invalid {
+      color: #6b7280;
+    }
+
+    .requirement-item i {
+      font-size: 10px;
+      width: 14px;
+    }
+
+    .password-match {
+      margin-top: 8px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #6b7280;
+    }
+
+    .password-match.valid {
+      color: #10b981;
+    }
+
+    .password-match.invalid {
+      color: #ef4444;
+    }
+
+    .password-match i {
+      font-size: 12px;
     }
 
     .form-control:focus + .input-icon {
@@ -483,7 +572,7 @@
 
         <div class="form-group">
           <label for="password">Password</label>
-          <div class="input-wrapper">
+          <div class="input-wrapper password-wrapper">
             <input 
               type="password" 
               id="password" 
@@ -492,8 +581,35 @@
               placeholder="Enter your password"
               required
               autocomplete="new-password"
+              minlength="8"
             >
             <i class="fas fa-lock input-icon"></i>
+            <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password">Confirm Password</label>
+          <div class="input-wrapper password-wrapper">
+            <input 
+              type="password" 
+              id="confirm_password" 
+              name="confirm_password" 
+              class="form-control" 
+              placeholder="Confirm your password"
+              required
+              autocomplete="new-password"
+            >
+            <i class="fas fa-lock input-icon"></i>
+            <button type="button" class="password-toggle" id="toggleConfirmPassword" aria-label="Show password">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+          <div class="password-match" id="passwordMatch" style="display: none;">
+            <i class="fas fa-circle"></i>
+            <span>Passwords match</span>
           </div>
         </div>
 
@@ -511,6 +627,148 @@
       </div>
     </div>
   </div>
+
+  <script>
+    // Toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const passwordIcon = togglePassword.querySelector('i');
+
+    togglePassword.addEventListener('click', function() {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      
+      // Toggle icon
+      if (type === 'text') {
+        passwordIcon.classList.remove('fa-eye');
+        passwordIcon.classList.add('fa-eye-slash');
+        togglePassword.setAttribute('aria-label', 'Hide password');
+      } else {
+        passwordIcon.classList.remove('fa-eye-slash');
+        passwordIcon.classList.add('fa-eye');
+        togglePassword.setAttribute('aria-label', 'Show password');
+      }
+    });
+
+    // Toggle confirm password visibility
+    const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+    const confirmPasswordIcon = toggleConfirmPassword.querySelector('i');
+
+    toggleConfirmPassword.addEventListener('click', function() {
+      const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      confirmPasswordInput.setAttribute('type', type);
+      
+      // Toggle icon
+      if (type === 'text') {
+        confirmPasswordIcon.classList.remove('fa-eye');
+        confirmPasswordIcon.classList.add('fa-eye-slash');
+        toggleConfirmPassword.setAttribute('aria-label', 'Hide password');
+      } else {
+        confirmPasswordIcon.classList.remove('fa-eye-slash');
+        confirmPasswordIcon.classList.add('fa-eye');
+        toggleConfirmPassword.setAttribute('aria-label', 'Show password');
+      }
+    });
+
+    // Password validation
+    function validatePassword(password) {
+      const requirements = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password)
+      };
+      return requirements;
+    }
+
+    function updateRequirementUI(requirements) {
+      const reqIds = {
+        length: 'req-length',
+        uppercase: 'req-uppercase',
+        lowercase: 'req-lowercase',
+        number: 'req-number'
+      };
+
+      Object.keys(requirements).forEach(key => {
+        const element = document.getElementById(reqIds[key]);
+        const icon = element.querySelector('i');
+        if (requirements[key]) {
+          element.classList.remove('invalid');
+          element.classList.add('valid');
+          icon.classList.remove('fa-circle');
+          icon.classList.add('fa-check-circle');
+        } else {
+          element.classList.remove('valid');
+          element.classList.add('invalid');
+          icon.classList.remove('fa-check-circle');
+          icon.classList.add('fa-circle');
+        }
+      });
+    }
+
+    function checkPasswordMatch() {
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+      const matchElement = document.getElementById('passwordMatch');
+      const icon = matchElement.querySelector('i');
+      const span = matchElement.querySelector('span');
+
+      if (confirmPassword.length === 0) {
+        matchElement.style.display = 'none';
+        return;
+      }
+
+      matchElement.style.display = 'flex';
+
+      if (password === confirmPassword && password.length > 0) {
+        matchElement.classList.remove('invalid');
+        matchElement.classList.add('valid');
+        icon.classList.remove('fa-times-circle', 'fa-circle');
+        icon.classList.add('fa-check-circle');
+        span.textContent = 'Passwords match';
+      } else {
+        matchElement.classList.remove('valid');
+        matchElement.classList.add('invalid');
+        icon.classList.remove('fa-check-circle', 'fa-circle');
+        icon.classList.add('fa-times-circle');
+        span.textContent = 'Passwords do not match';
+      }
+    }
+
+    // Validate password on input
+    passwordInput.addEventListener('input', function() {
+      const password = this.value;
+      const requirements = validatePassword(password);
+      updateRequirementUI(requirements);
+      checkPasswordMatch();
+    });
+
+    // Check password match on confirm password input
+    confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+
+    // Form submission validation
+    document.querySelector('.login-form').addEventListener('submit', function(e) {
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+      const requirements = validatePassword(password);
+
+      // Check if all requirements are met
+      const allValid = Object.values(requirements).every(req => req === true);
+
+      if (!allValid) {
+        e.preventDefault();
+        alert('Please ensure your password meets all requirements.');
+        return false;
+      }
+
+      if (password !== confirmPassword) {
+        e.preventDefault();
+        alert('Passwords do not match. Please try again.');
+        return false;
+      }
+    });
+  </script>
 
 </body>
 </html>

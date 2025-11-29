@@ -55,6 +55,41 @@ class ApplicantController extends Controller
         ]);
     }
 
+    public function deleteApplication($id)
+    {
+        $userId = $_SESSION['user']['id'];
+        
+        // Verify the application belongs to the user
+        $application = $this->Application->getApplicationByUserAndId($userId, $id);
+        
+        if (!$application) {
+            $_SESSION['error_message'] = 'Application not found or you do not have permission to delete it.';
+            redirect('/applicant/my-applications');
+            exit;
+        }
+        
+        // Prevent deletion of profile records (status = 'profile')
+        if (strtolower($application['status'] ?? '') === 'profile') {
+            $_SESSION['error_message'] = 'Profile records cannot be deleted. Please update your profile instead.';
+            redirect('/applicant/my-applications');
+            exit;
+        }
+        
+        try {
+            $result = $this->Application->deleteApplication($id);
+            
+            if ($result) {
+                $_SESSION['success_message'] = 'Application deleted successfully!';
+            } else {
+                $_SESSION['error_message'] = 'Failed to delete application. Please try again.';
+            }
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = 'An error occurred while deleting the application: ' . $e->getMessage();
+        }
+        
+        redirect('/applicant/my-applications');
+    }
+
     public function profile()
     {
         $userId = $_SESSION['user']['id'];
@@ -69,8 +104,8 @@ class ApplicantController extends Controller
         // Remove password from user data for security
         unset($user['password']);
         
-        // Get latest application data to populate profile
-        $applications = $this->Application->getApplicationsByUser($userId);
+        // Get profile data (includes profile records for display)
+        $applications = $this->Application->getProfileDataByUser($userId);
         $latestApplication = !empty($applications) ? $applications[0] : null;
         
         // Merge user data with application data for profile display
@@ -128,9 +163,9 @@ class ApplicantController extends Controller
         $guardian_contact = isset($_POST['guardian_contact']) ? trim($_POST['guardian_contact']) : '';
         $guardian_address = isset($_POST['guardian_address']) ? trim($_POST['guardian_address']) : '';
 
-        // Validation
-        if (empty($last_name) || empty($first_name) || empty($email)) {
-            $_SESSION['error_message'] = 'Last name, first name, and email are required.';
+        // Validation - Only email is required for account purposes
+        if (empty($email)) {
+            $_SESSION['error_message'] = 'Email address is required.';
             redirect('/applicant/profile');
             exit;
         }
@@ -144,10 +179,18 @@ class ApplicantController extends Controller
         }
 
         // Prepare user update data
-        $userData = [
-            'fullname' => trim($first_name . ' ' . $last_name),
-            'email' => $email
-        ];
+        // Build fullname from first and last name if provided, otherwise keep existing
+        $userData = ['email' => $email];
+        
+        if (!empty($first_name) || !empty($last_name)) {
+            // Only update fullname if at least one name field is provided
+            $nameParts = array_filter([$first_name, $last_name]); // Remove empty values
+            $fullname = trim(implode(' ', $nameParts));
+            if (!empty($fullname)) {
+                $userData['fullname'] = $fullname;
+            }
+        }
+        // If names are empty, don't update fullname - keep existing value
 
         // Update user account
         // Note: updateUser returns rowCount() which can be 0 if no rows changed, but that's still success
@@ -159,10 +202,11 @@ class ApplicantController extends Controller
             exit;
         }
         
-        // Update or create application record with profile data
-        $applications = $this->Application->getApplicationsByUser($userId);
+        // Update or create application record with profile data (include profile records)
+        $applications = $this->Application->getProfileDataByUser($userId);
         $latestApplication = !empty($applications) ? $applications[0] : null;
         
+        // Prepare application/profile data - include all fields from the form
         $applicationData = [
             'last_name' => $last_name,
             'first_name' => $first_name,
@@ -195,25 +239,24 @@ class ApplicantController extends Controller
             'guardian_name' => $guardian_name,
             'guardian_relationship' => $guardian_relationship,
             'guardian_contact' => $guardian_contact,
-            'guardian_address' => $guardian_address,
-            'id' => $userId
+            'guardian_address' => $guardian_address
         ];
         
         try {
             if ($latestApplication) {
-                // Update existing application data - use application ID, not user ID
+                // Update existing application/profile data
                 $applicationId = $latestApplication['id'] ?? null;
                 if ($applicationId) {
-                    // Remove user_id from update data as it shouldn't change
-                    $updateData = $applicationData;
-                    unset($updateData['id']);
-                    $this->Application->db->table('applications')
+                    $result = $this->Application->db->table('applications')
                         ->where('id', $applicationId)
-                        ->update($updateData);
+                        ->update($applicationData);
                 }
             } else {
-                // Create new application record for profile
-                $applicationData['status'] = 'pending';
+                // Create a profile record to store profile data
+                // Use status 'profile' to distinguish from actual submitted applications
+                $applicationData['status'] = 'profile';
+                $applicationData['date_submitted'] = date('Y-m-d H:i:s');
+                // Link to user via email (the id field in saveApplication will be removed)
                 $this->Application->saveApplication($applicationData);
             }
         } catch (Exception $e) {

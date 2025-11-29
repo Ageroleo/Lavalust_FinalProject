@@ -52,7 +52,17 @@ class ApplicationModel extends Model
                  ->get();
     }
 
-    public function getApplicationsByUser($userId)
+    /**
+     * Delete an application by ID
+     */
+    public function deleteApplication($id)
+    {
+        return $this->db->table($this->table)
+            ->where('id', $id)
+            ->delete();
+    }
+
+    public function getApplicationsByUser($userId, $includeProfile = false)
     {
         // Get table name with prefix
         $this->db->table($this->table);
@@ -72,14 +82,18 @@ class ApplicationModel extends Model
         $userEmail = trim(strtolower($user['email']));
         
         // Get ALL applications for the user by matching both user_id and email
+        // Exclude profile records (status = 'profile') unless explicitly requested
         // Try multiple approaches to ensure we get all applications
         $allResults = [];
         $foundIds = [];
         
         try {
+            // Build status filter - exclude 'profile' status unless includeProfile is true
+            $statusFilter = $includeProfile ? '' : " AND status != 'profile'";
+            
             // Approach 1: Try to match by user_id if column exists
             try {
-                $sql = "SELECT * FROM `{$fullTableName}` WHERE id = ? ORDER BY date_submitted DESC, id DESC";
+                $sql = "SELECT * FROM `{$fullTableName}` WHERE id = ?{$statusFilter} ORDER BY date_submitted DESC, id DESC";
                 $stmt = $this->db->raw($sql, [$userId]);
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($results as $result) {
@@ -94,7 +108,7 @@ class ApplicationModel extends Model
             
             // Approach 2: Match by email (case-insensitive)
             try {
-                $sql = "SELECT * FROM `{$fullTableName}` WHERE LOWER(TRIM(email)) = ? ORDER BY date_submitted DESC, id DESC";
+                $sql = "SELECT * FROM `{$fullTableName}` WHERE LOWER(TRIM(email)) = ?{$statusFilter} ORDER BY date_submitted DESC, id DESC";
                 $stmt = $this->db->raw($sql, [$userEmail]);
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($results as $result) {
@@ -106,7 +120,7 @@ class ApplicationModel extends Model
             } catch (Exception $e) {
                 // If LOWER/TRIM doesn't work, try exact match
                 try {
-                    $sql = "SELECT * FROM `{$fullTableName}` WHERE email = ? ORDER BY date_submitted DESC, id DESC";
+                    $sql = "SELECT * FROM `{$fullTableName}` WHERE email = ?{$statusFilter} ORDER BY date_submitted DESC, id DESC";
                     $stmt = $this->db->raw($sql, [$user['email']]);
                     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     foreach ($results as $result) {
@@ -120,6 +134,13 @@ class ApplicationModel extends Model
                 }
             }
             
+            // Filter out profile records if not included (fallback in case SQL filter didn't work)
+            if (!$includeProfile) {
+                $allResults = array_filter($allResults, function($result) {
+                    return strtolower($result['status'] ?? '') !== 'profile';
+                });
+            }
+            
             // Sort all results by date_submitted DESC, then id DESC
             usort($allResults, function($a, $b) {
                 $dateA = isset($a['date_submitted']) ? strtotime($a['date_submitted']) : 0;
@@ -130,11 +151,19 @@ class ApplicationModel extends Model
                 return ($b['id'] ?? 0) - ($a['id'] ?? 0); // DESC
             });
             
-            return $allResults;
+            return array_values($allResults); // Re-index array after filtering
         } catch (Exception $e) {
             error_log("Error fetching applications for user {$userId}: " . $e->getMessage());
             return [];
         }
+    }
+    
+    /**
+     * Get profile data for a user (includes profile records)
+     */
+    public function getProfileDataByUser($userId)
+    {
+        return $this->getApplicationsByUser($userId, true);
     }
 
     /**
@@ -187,28 +216,62 @@ class ApplicationModel extends Model
     }
 
     /**
-     * Get all applications (alias for getAll for consistency)
+     * Get all applications (excludes profile records)
      */
     public function getAllApplications()
     {
-        return $this->db->table($this->table)
-            ->order_by('date_submitted', 'DESC')
-            ->get_all();
+        // Get table name with prefix
+        $this->db->table($this->table);
+        $reflection = new ReflectionClass($this->db);
+        $tableProperty = $reflection->getProperty('table');
+        $tableProperty->setAccessible(true);
+        $fullTableName = $tableProperty->getValue($this->db);
+        
+        try {
+            $sql = "SELECT * FROM `{$fullTableName}` WHERE status != 'profile' ORDER BY date_submitted DESC";
+            $stmt = $this->db->raw($sql, []);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            // Fallback to regular query and filter
+            $results = $this->db->table($this->table)
+                ->order_by('date_submitted', 'DESC')
+                ->get_all();
+            return array_filter($results, function($result) {
+                return strtolower($result['status'] ?? '') !== 'profile';
+            });
+        }
     }
 
     /**
-     * Get applications for review (pending status)
+     * Get applications for review (pending status, excludes profile records)
      */
     public function getApplicationsForReview()
     {
-        return $this->db->table($this->table)
-            ->where('status', 'pending')
-            ->order_by('date_submitted', 'DESC')
-            ->get_all();
+        // Get table name with prefix
+        $this->db->table($this->table);
+        $reflection = new ReflectionClass($this->db);
+        $tableProperty = $reflection->getProperty('table');
+        $tableProperty->setAccessible(true);
+        $fullTableName = $tableProperty->getValue($this->db);
+        
+        try {
+            $sql = "SELECT * FROM `{$fullTableName}` WHERE status = 'pending' AND status != 'profile' ORDER BY date_submitted DESC";
+            $stmt = $this->db->raw($sql, []);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            // Fallback - status = 'pending' already excludes 'profile', but be explicit
+            $results = $this->db->table($this->table)
+                ->where('status', 'pending')
+                ->order_by('date_submitted', 'DESC')
+                ->get_all();
+            return array_filter($results, function($result) {
+                return strtolower($result['status'] ?? '') !== 'profile';
+            });
+        }
     }
 
     /**
-     * Get application statistics
+     * Get application statistics (excludes profile records)
      */
     public function getStatistics()
     {
@@ -219,14 +282,14 @@ class ApplicationModel extends Model
         $tableProperty->setAccessible(true);
         $fullTableName = $tableProperty->getValue($this->db);
         
-        // Get total count
-        $sql = "SELECT COUNT(*) as count FROM `{$fullTableName}`";
+        // Get total count (excluding profile records)
+        $sql = "SELECT COUNT(*) as count FROM `{$fullTableName}` WHERE status != 'profile'";
         $stmt = $this->db->raw($sql, []);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $total = (int)($result['count'] ?? 0);
         
-        // Get pending count
-        $sql = "SELECT COUNT(*) as count FROM `{$fullTableName}` WHERE status = ?";
+        // Get pending count (excluding profile records)
+        $sql = "SELECT COUNT(*) as count FROM `{$fullTableName}` WHERE status = ? AND status != 'profile'";
         $stmt = $this->db->raw($sql, ['pending']);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $pending = (int)($result['count'] ?? 0);

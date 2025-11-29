@@ -29,8 +29,8 @@ class ApplyController extends Controller
             exit;
         }
         
-        // Get latest application data (which contains profile information)
-        $applications = $this->Application->getApplicationsByUser($userId);
+        // Get latest application or profile data (which contains profile information for pre-filling)
+        $applications = $this->Application->getProfileDataByUser($userId);
         $latestApplication = !empty($applications) ? $applications[0] : null;
         
         // Merge user data with application data for form pre-filling

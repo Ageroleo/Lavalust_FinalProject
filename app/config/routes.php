@@ -57,6 +57,7 @@ $router->get('/admin/dashboard', 'AuthController::adminDashboard');
 $router->get('/applicant/dashboard', 'ApplicantController::dashboard');
 $router->get('/applicant/my-applications', 'ApplicantController::myApplications');
 $router->get('/applicant/view-application/{id}', 'ApplicantController::viewApplication');
+$router->get('/applicant/delete-application/{id}', 'ApplicantController::deleteApplication');
 $router->get('/applicant/profile', 'ApplicantController::profile');
 $router->post('/applicant/profile/update', 'ApplicantController::updateProfile');
 $router->get('/applicant/settings', 'ApplicantController::settings');

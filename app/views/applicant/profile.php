@@ -948,12 +948,12 @@
             
             <div class="form-row">
               <div class="form-group">
-                <label for="last_name">Last Name *</label>
-                <input type="text" id="last_name" name="last_name" value="<?= htmlspecialchars($user['last_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" value="<?= htmlspecialchars($user['last_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
               </div>
               <div class="form-group">
-                <label for="first_name">First Name *</label>
-                <input type="text" id="first_name" name="first_name" value="<?= htmlspecialchars($user['first_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" value="<?= htmlspecialchars($user['first_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
               </div>
               <div class="form-group">
                 <label for="middle_name">Middle Name</label>
@@ -962,18 +962,18 @@
             </div>
 
             <div class="form-group">
-              <label for="address">Home Address *</label>
-              <input type="text" id="address" name="address" value="<?= htmlspecialchars($user['address'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="House No., Street, Barangay, Municipality, Province" required>
+              <label for="address">Home Address</label>
+              <input type="text" id="address" name="address" value="<?= htmlspecialchars($user['address'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="House No., Street, Barangay, Municipality, Province">
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label for="birthday">Birthday *</label>
-                <input type="date" id="birthday" name="birthday" value="<?= htmlspecialchars($user['birthday'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                <label for="birthday">Birthday</label>
+                <input type="date" id="birthday" name="birthday" value="<?= htmlspecialchars($user['birthday'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
               </div>
               <div class="form-group">
-                <label for="age">Age *</label>
-                <input type="number" id="age" name="age" value="<?= htmlspecialchars($user['age'] ?? '', ENT_QUOTES, 'UTF-8') ?>" min="1" required>
+                <label for="age">Age</label>
+                <input type="number" id="age" name="age" value="<?= htmlspecialchars($user['age'] ?? '', ENT_QUOTES, 'UTF-8') ?>" min="1">
               </div>
               <div class="form-group">
                 <label for="civil_status">Civil Status</label>
@@ -983,8 +983,8 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label for="contact_no">Contact No. *</label>
-                <input type="text" id="contact_no" name="contact_no" value="<?= htmlspecialchars($user['contact_no'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                <label for="contact_no">Contact No.</label>
+                <input type="text" id="contact_no" name="contact_no" value="<?= htmlspecialchars($user['contact_no'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
               </div>
               <div class="form-group">
                 <label for="birth_place">Place of Birth</label>
@@ -1006,6 +1006,7 @@
             <div class="form-group">
               <label for="email">Email Address *</label>
               <input type="email" id="email" name="email" value="<?= htmlspecialchars($user['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+              <small>Email is required for account login</small>
             </div>
 
             <div class="form-group">
